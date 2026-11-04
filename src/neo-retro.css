@@ -778,3 +778,317 @@ button, input, textarea { font-family: inherit; }
 .window-caption img { flex: 0 0 auto; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); image-rendering: pixelated; }
 .taskbar-item img { object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0,0,0,.45)); image-rendering: pixelated; }
 .start-app-list button > img { flex: 0 0 auto; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 1px 1px rgba(0,0,0,.2)); }
+
+
+
+/* ============================================================
+   JXY OS Aero glass + taskbar reference match
+   Tuned against the supplied 1266 x 58 Windows 7 taskbar crop.
+   ============================================================ */
+
+/* Actual Aero glass: translucent layers, blurred desktop beneath,
+   bright upper bevel and a cool blue edge. */
+.window {
+  background: linear-gradient(145deg, rgba(198, 229, 255, .16), rgba(4, 24, 50, .28));
+  border: 1px solid rgba(191, 226, 255, .78);
+  box-shadow:
+    0 18px 48px rgba(0, 7, 19, .58),
+    0 0 0 1px rgba(255, 255, 255, .34) inset,
+    0 0 24px rgba(62, 163, 255, .22);
+  /* Do not create a parent backdrop root: the titlebar must sample
+     the actual desktop wallpaper for visible Aero blur. */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.window-titlebar {
+  position: relative;
+  z-index: 2;
+  isolation: isolate;
+  overflow: hidden;
+  color: #f5fbff;
+  background:
+    linear-gradient(180deg,
+      rgba(230, 247, 255, .52) 0%,
+      rgba(145, 204, 243, .34) 13%,
+      rgba(59, 135, 199, .38) 38%,
+      rgba(20, 79, 139, .52) 68%,
+      rgba(5, 43, 91, .64) 100%),
+    linear-gradient(90deg, rgba(198, 230, 255, .18), rgba(5, 28, 63, .24));
+  border-bottom: 1px solid rgba(6, 39, 79, .68);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.82),
+    inset 0 2px 0 rgba(255,255,255,.24),
+    inset 0 -1px 0 rgba(255,255,255,.16);
+  backdrop-filter: blur(24px) saturate(190%) brightness(1.12);
+  -webkit-backdrop-filter: blur(24px) saturate(190%) brightness(1.12);
+  text-shadow: 0 1px 2px rgba(0, 18, 43, .95);
+}
+.window-titlebar::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 22% -30%, rgba(255,255,255,.56), transparent 48%),
+    linear-gradient(105deg, rgba(255,255,255,.18), transparent 28%, rgba(104,190,255,.12) 68%, rgba(255,255,255,.08));
+}
+.window-titlebar::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: 1px;
+  right: 1px;
+  top: 1px;
+  height: 44%;
+  pointer-events: none;
+  border-radius: 7px 7px 0 0;
+  background: linear-gradient(180deg, rgba(255,255,255,.34), rgba(255,255,255,.07) 72%, transparent);
+}
+.window-caption,
+.window-controls {
+  position: relative;
+  z-index: 1;
+}
+.window-controls button {
+  background: linear-gradient(180deg, rgba(218,243,255,.72), rgba(82,153,211,.78) 48%, rgba(26,87,146,.9));
+  border: 1px solid rgba(223,244,255,.78);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.82), 0 1px 3px rgba(0,0,0,.36);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.window-controls .close-button {
+  background: linear-gradient(180deg, rgba(255,224,216,.92), rgba(239,116,99,.95) 48%, rgba(164,39,37,.98));
+  border-color: rgba(255,225,214,.92);
+}
+
+/* Windows 7 taskbar: inset glass panel, glossy blue reflections,
+   four permanently pinned launchers, and a two-line clock. */
+.taskbar {
+  position: absolute;
+  z-index: 9000;
+  inset: auto 20px 0;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 7px 0 0;
+  isolation: isolate;
+  overflow: visible;
+  background:
+    radial-gradient(ellipse at 29% -8%, rgba(221,243,255,.42), transparent 36%),
+    radial-gradient(ellipse at 82% 0%, rgba(96,166,233,.27), transparent 38%),
+    linear-gradient(180deg,
+      rgba(162, 216, 252, .72) 0%,
+      rgba(69, 139, 207, .82) 10%,
+      rgba(31, 86, 151, .91) 37%,
+      rgba(8, 46, 101, .97) 76%,
+      rgba(4, 30, 73, .99) 100%);
+  border: 1px solid rgba(177, 222, 255, .76);
+  border-bottom: 0;
+  border-radius: 5px 5px 0 0;
+  box-shadow:
+    0 -3px 17px rgba(0, 0, 0, .34),
+    0 0 0 1px rgba(2, 19, 48, .65),
+    inset 0 1px 0 rgba(255,255,255,.8),
+    inset 0 2px 0 rgba(255,255,255,.22);
+  backdrop-filter: blur(25px) saturate(185%) brightness(1.08);
+  -webkit-backdrop-filter: blur(25px) saturate(185%) brightness(1.08);
+}
+.taskbar::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  inset: 1px 1px 0;
+  border-radius: 4px 4px 0 0;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.25), transparent 19%),
+    linear-gradient(90deg, rgba(183,226,255,.1), transparent 19%, rgba(212,239,255,.08) 52%, transparent 82%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35);
+}
+.taskbar::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 4%;
+  right: 4%;
+  top: 2px;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.66), transparent);
+  filter: blur(.3px);
+}
+
+.taskbar .start-button {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 53px;
+  width: 53px;
+  min-width: 53px;
+  height: 49px;
+  margin: -1px 0 0 -1px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, rgba(179,224,255,.2), rgba(5,39,91,.13));
+  border: 0;
+  border-right: 1px solid rgba(207,236,255,.22);
+  border-radius: 4px 0 0 0;
+  box-shadow: inset 1px 0 0 rgba(255,255,255,.26);
+}
+.taskbar .start-orb.windows7-orb {
+  width: 41px;
+  height: 41px;
+  border: 1px solid rgba(232,250,255,.98);
+  background:
+    radial-gradient(circle at 31% 20%, #fff 0, #d7f4ff 7%, #48a5df 28%, #0b4f91 64%, #032451 100%);
+  box-shadow:
+    inset 0 2px 4px rgba(255,255,255,.9),
+    inset 0 -4px 7px rgba(0,0,0,.5),
+    0 1px 5px rgba(0,15,40,.8),
+    0 0 11px rgba(121,207,255,.7);
+}
+.taskbar .start-orb.windows7-orb::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 4px;
+  width: 26px;
+  height: 10px;
+  border-radius: 50%;
+  transform: rotate(-24deg);
+  background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,0));
+}
+.taskbar .win-pane { width: 10px; height: 10px; }
+
+.taskbar .taskbar-apps {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 49px;
+  gap: 0;
+  padding: 0 0 0 1px;
+  overflow: hidden;
+}
+.taskbar .taskbar-item {
+  flex: 0 0 46px;
+  width: 46px;
+  min-width: 46px;
+  max-width: 46px;
+  height: 43px;
+  margin: 0 1px;
+  padding: 2px;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(180deg, rgba(150,207,250,.30), rgba(12,55,111,.45));
+  border: 1px solid rgba(192,225,255,.27);
+  border-radius: 4px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.24),
+    inset 0 -1px 0 rgba(0,17,49,.32),
+    0 1px 2px rgba(0,0,0,.16);
+  transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+.taskbar .taskbar-item.running {
+  background:
+    linear-gradient(180deg, rgba(170,222,255,.48), rgba(22,89,158,.66));
+  border-color: rgba(213,239,255,.58);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.48), 0 0 9px rgba(91,178,247,.2);
+}
+.taskbar .taskbar-item:hover,
+.taskbar .taskbar-item.active {
+  background:
+    linear-gradient(180deg, rgba(213,240,255,.65), rgba(48,125,190,.76) 44%, rgba(8,61,124,.8));
+  border-color: rgba(231,247,255,.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.72),
+    inset 0 -1px 0 rgba(2,32,74,.44),
+    0 0 12px rgba(127,205,255,.35);
+}
+.taskbar .taskbar-item.minimized { opacity: .8; }
+.taskbar .taskbar-item img {
+  width: 31px;
+  height: 31px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.48));
+}
+
+.taskbar .system-tray {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  min-width: 141px;
+  height: 43px;
+  margin-left: auto;
+  padding: 0 8px 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  color: #f4f9ff;
+  background: linear-gradient(180deg, rgba(129,185,228,.16), rgba(4,37,83,.28));
+  border: 0;
+  border-left: 1px solid rgba(212,237,255,.23);
+  border-radius: 0;
+  box-shadow: inset 1px 0 0 rgba(255,255,255,.08);
+  text-shadow: 0 1px 2px rgba(0,18,44,.95);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.tray-status-icons {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(239,249,255,.96);
+}
+.tray-status-icons svg { filter: drop-shadow(0 1px 1px rgba(0,0,0,.55)); }
+.tray-clock {
+  min-width: 68px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  white-space: nowrap;
+  font-size: 10px;
+  line-height: 1.1;
+  letter-spacing: .05px;
+}
+.tray-clock small { color: rgba(235,245,255,.92); font-size: 9px; line-height: 1.1; }
+
+/* Aero glass must visibly show the wallpaper through the frame. */
+@supports not ((backdrop-filter: blur(1px))) {
+  .window-titlebar {
+    background:
+      linear-gradient(180deg, rgba(168,214,248,.82), rgba(21,75,132,.86));
+  }
+  .taskbar {
+    background:
+      linear-gradient(180deg, rgba(108,174,226,.95), rgba(8,43,91,.98));
+  }
+}
+
+@media (max-width: 700px) {
+  .taskbar {
+    inset: auto 0 0;
+    height: 56px;
+    border-radius: 0;
+    padding: 0 5px;
+  }
+  .taskbar .start-button { height: 54px; flex-basis: 49px; width: 49px; min-width: 49px; }
+  .taskbar .taskbar-apps { height: 54px; overflow-x: auto; }
+  .taskbar .taskbar-item { flex-basis: 43px; width: 43px; min-width: 43px; max-width: 43px; height: 42px; }
+  .taskbar .system-tray { min-width: 70px; height: 42px; padding: 0 5px; gap: 5px; }
+  .tray-status-icons { gap: 4px; }
+  .tray-status-icons svg { width: 12px; height: 12px; }
+  .tray-clock { min-width: 0; font-size: 9px; }
+  .tray-clock small { display: none; }
+}
+
