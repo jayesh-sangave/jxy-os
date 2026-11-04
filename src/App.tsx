@@ -3,7 +3,7 @@ import type { FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPoi
 import {
   FileText, Minus, Square, X,
   RefreshCw, Monitor, Maximize2, Activity, Radio, Gauge, Network, Cpu, ChevronLeft, ChevronRight,
-  Home, HardDrive, Download, ExternalLink, Image as ImageIcon, Code2, Search, Video,
+  Home, HardDrive, Download, ExternalLink, Image as ImageIcon, Code2, Search, Video, Wifi, Volume2, BatteryFull,
 } from "lucide-react";
 import StartMenu, { type AppId } from "./components/StartMenu";
 import NeoIcon, { type NeoIconName } from "./components/NeoIcon";
@@ -213,6 +213,7 @@ function App() {
         onWindowClick={handleTaskbarClick}
         onStartClick={() => { setStartOpen((open) => !open); setContextMenu(null); }}
         startOpen={startOpen}
+        onOpenApp={openApp}
       />
     </main>
   );
@@ -744,28 +745,69 @@ function ContactView() {
   );
 }
 
-function Taskbar({ windows, onWindowClick, onStartClick, startOpen }: {
+function Taskbar({ windows, onWindowClick, onStartClick, startOpen, onOpenApp }: {
   windows: WindowState[];
   onWindowClick: (id: AppId) => void;
   onStartClick: () => void;
   startOpen: boolean;
+  onOpenApp: (id: AppId) => void;
 }) {
   const [time, setTime] = useState(() => new Date());
+
   useEffect(() => {
-    const timer = window.setInterval(() => setTime(new Date()), 60_000);
+    const timer = window.setInterval(() => setTime(new Date()), 15_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  const pinnedApps: AppId[] = ["explorer", "projects", "lab", "terminal"];
+  const topZ = Math.max(...windows.filter((win) => !win.minimized && !win.closing).map((win) => win.zIndex), 0);
+
   return (
     <footer className="taskbar" onPointerDown={(event) => event.stopPropagation()}>
-      <button className={`start-button ${startOpen ? "start-active" : ""}`} onClick={onStartClick}>
-        <span className="start-orb windows7-orb" aria-hidden="true"><i className="win-pane pane-red"/><i className="win-pane pane-green"/><i className="win-pane pane-blue"/><i className="win-pane pane-yellow"/></span><span className="start-label">Start</span>
+      <button
+        className={`start-button ${startOpen ? "start-active" : ""}`}
+        onClick={onStartClick}
+        aria-label="Open Start menu"
+        title="Start"
+      >
+        <span className="start-orb windows7-orb" aria-hidden="true">
+          <i className="win-pane pane-red" />
+          <i className="win-pane pane-green" />
+          <i className="win-pane pane-blue" />
+          <i className="win-pane pane-yellow" />
+        </span>
+        <span className="start-label">Start</span>
       </button>
-      <div className="taskbar-apps">{windows.filter((win) => !win.closing).map((win) => (
-        <button key={win.id} className={`taskbar-item ${!win.minimized ? "active" : ""}`} onClick={() => onWindowClick(win.id)} title={win.title} aria-label={win.title}>
-          <NeoIcon name={appInfo[win.id].icon} size={31} />
-        </button>
-      ))}</div>
-      <div className="system-tray"><span>JXY OS</span><span>{time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></div>
+
+      <div className="taskbar-apps" aria-label="Pinned applications">
+        {pinnedApps.map((id) => {
+          const instance = windows.find((win) => win.id === id && !win.closing);
+          const active = Boolean(instance && !instance.minimized && instance.zIndex === topZ);
+          return (
+            <button
+              key={id}
+              className={`taskbar-item ${instance ? "running" : ""} ${active ? "active" : ""} ${instance?.minimized ? "minimized" : ""}`}
+              onClick={() => instance ? onWindowClick(id) : onOpenApp(id)}
+              title={appInfo[id].title}
+              aria-label={`Open ${appInfo[id].title}`}
+            >
+              <NeoIcon name={appInfo[id].icon} size={31} />
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="system-tray">
+        <div className="tray-status-icons" aria-label="System status">
+          <Wifi size={14} strokeWidth={2.2} />
+          <Volume2 size={14} strokeWidth={2.2} />
+          <BatteryFull size={16} strokeWidth={2.1} />
+        </div>
+        <div className="tray-clock" aria-label={time.toLocaleString()}>
+          <span>{time.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
+          <small>{time.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</small>
+        </div>
+      </div>
     </footer>
   );
 }
