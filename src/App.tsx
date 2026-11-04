@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import {
-  Folder, FileText, Minus, Square, X,
-  RefreshCw, Monitor, Maximize2, Activity, Radio, Gauge, Network, ChevronLeft,
-  Home, HardDrive, Download, ExternalLink, Image as ImageIcon, Code2,
+  FileText, Minus, Square, X,
+  RefreshCw, Monitor, Maximize2, Activity, Radio, Gauge, Network, Cpu, ChevronLeft, ChevronRight,
+  Home, HardDrive, Download, ExternalLink, Image as ImageIcon, Code2, Search, Video,
 } from "lucide-react";
 import StartMenu, { type AppId } from "./components/StartMenu";
 import NeoIcon, { type NeoIconName } from "./components/NeoIcon";
@@ -31,8 +31,10 @@ const appInfo: Record<AppId, { title: string; icon: NeoIconName }> = {
   lab: { title: "Robotics Lab", icon: "lab" },
   resume: { title: "Resume", icon: "resume" },
   contact: { title: "Contact", icon: "contact" },
+  settings: { title: "Settings", icon: "settings" },
 };
-const desktopApps: AppId[] = ["projects", "lab", "explorer", "terminal", "resume", "about", "contact"];
+// Row-major order matches the two-column icon arrangement in the reference.
+const desktopApps: AppId[] = ["projects", "lab", "explorer", "terminal", "resume", "about", "contact", "settings"];
 
 function App() {
   const [windows, setWindows] = useState<WindowState[]>([]);
@@ -186,6 +188,7 @@ function App() {
             ? { ...item, snap, maximized: false }
             : item))}
           onOpenApp={openApp}
+          onWallpaperChange={setWallpaper}
         />
       ))}
 
@@ -215,7 +218,7 @@ function App() {
   );
 }
 
-function Window({ window: win, mobile, onFocus, onClose, onMinimize, onMaximize, onMove, onSnap, onOpenApp }: {
+function Window({ window: win, mobile, onFocus, onClose, onMinimize, onMaximize, onMove, onSnap, onOpenApp, onWallpaperChange }: {
   window: WindowState;
   mobile: boolean;
   onFocus: () => void;
@@ -225,6 +228,7 @@ function Window({ window: win, mobile, onFocus, onClose, onMinimize, onMaximize,
   onMove: (position: { x: number; y: number }) => void;
   onSnap: (snap: Snap) => void;
   onOpenApp: (id: AppId) => void;
+  onWallpaperChange: (wallpaper: number) => void;
 }) {
   const [dragging, setDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -262,7 +266,7 @@ function Window({ window: win, mobile, onFocus, onClose, onMinimize, onMaximize,
 
   return (
     <section
-      className={`window ${win.maximized ? "maximized" : ""} ${win.snap !== "none" ? "snapped" : ""} ${win.closing ? "window-closing" : ""} ${win.minimized ? "window-minimizing" : ""} ${dragging ? "window-dragging" : ""}`}
+      className={`window window-application-${win.id} ${win.maximized ? "maximized" : ""} ${win.snap !== "none" ? "snapped" : ""} ${win.closing ? "window-closing" : ""} ${win.minimized ? "window-minimizing" : ""} ${dragging ? "window-dragging" : ""}`}
       style={{ ...snapStyle, zIndex: win.zIndex }}
       onPointerDown={onFocus}
     >
@@ -274,7 +278,7 @@ function Window({ window: win, mobile, onFocus, onClose, onMinimize, onMaximize,
         onPointerCancel={() => { setDragging(false); setSnapPreview("none"); }}
         onDoubleClick={() => { if (!mobile) onMaximize(); }}
       >
-        <div className="window-caption"><NeoIcon name={appInfo[win.id].icon} size={22} /><span>{win.title}</span></div>
+        <div className="window-caption"><NeoIcon name={appInfo[win.id].icon} size={22} /><span>{win.id === "terminal" ? "JXY OS Terminal" : win.title}</span></div>
         <div className="window-controls">
           <button onPointerDown={(event) => event.stopPropagation()} onClick={onMinimize} aria-label="Minimize"><Minus size={14} /></button>
           <button onPointerDown={(event) => event.stopPropagation()} onClick={onMaximize} aria-label="Maximize"><Square size={12} /></button>
@@ -289,6 +293,7 @@ function Window({ window: win, mobile, onFocus, onClose, onMinimize, onMaximize,
         {win.id === "terminal" && <TerminalView onOpenApp={onOpenApp} />}
         {win.id === "resume" && <ResumeView />}
         {win.id === "contact" && <ContactView />}
+        {win.id === "settings" && <SettingsView onWallpaperChange={onWallpaperChange} />}
       </div>
     </section>
   );
@@ -361,7 +366,7 @@ function SystemRow({ name, detail, status }: { name: string; detail: string; sta
   return <div className="system-row"><div><strong>{name}</strong><span>{detail}</span></div><small>{status}</small></div>;
 }
 
-type TerminalLine = { kind: "input" | "output" | "error" | "muted"; text: string };
+type TerminalLine = { kind: "input" | "output" | "error" | "muted" | "neofetch" | "help-preview"; text: string };
 const terminalHelp = [
   ["help, /help", "List available commands and usage"],
   ["about", "Open the About Me app"],
@@ -374,6 +379,7 @@ const terminalHelp = [
   ["skills", "List technical skills"],
   ["resume", "Open the resume app"],
   ["contact", "Open contact options"],
+  ["settings", "Open desktop settings"],
   ["github", "Open GitHub profile"],
   ["whoami", "Show the current user"],
   ["date", "Print the current date and time"],
@@ -387,8 +393,10 @@ const terminalHelp = [
 
 function TerminalView({ onOpenApp }: { onOpenApp: (id: AppId) => void }) {
   const [lines, setLines] = useState<TerminalLine[]>([
-    { kind: "output", text: "JXY OS Terminal [Version 2.0]" },
-    { kind: "muted", text: "Interactive portfolio shell. Type /help to see commands." },
+    { kind: "input", text: "jxy@jxy-os:~$ neofetch" },
+    { kind: "neofetch", text: "" },
+    { kind: "input", text: "jxy@jxy-os:~$ help" },
+    { kind: "help-preview", text: "" },
   ]);
   const [command, setCommand] = useState("");
   const [history, setHistory] = useState<string[]>([]);
@@ -412,7 +420,7 @@ function TerminalView({ onOpenApp }: { onOpenApp: (id: AppId) => void }) {
     const cmd = args[0].toLowerCase();
     const rest = args.slice(1).join(" ");
     const output = (text: string, kind: TerminalLine["kind"] = "output") => append([{ kind, text }]);
-    append([{ kind: "input", text: `jxy@${cwd} $ ${raw}` }]);
+    append([{ kind: "input", text: `jxy@jxy-os:${cwd}$ ${raw}` }]);
     switch (cmd) {
       case "help":
         append([
@@ -424,10 +432,10 @@ function TerminalView({ onOpenApp }: { onOpenApp: (id: AppId) => void }) {
       case "clear": setLines([]); break;
       case "about": onOpenApp("about"); output("Opening About Me..."); break;
       case "open": {
-        const aliases: Record<string, AppId> = { explorer: "explorer", files: "explorer", projects: "projects", project: "projects", about: "about", terminal: "terminal", lab: "lab", robotics: "lab", resume: "resume", contact: "contact" };
+        const aliases: Record<string, AppId> = { explorer: "explorer", files: "explorer", projects: "projects", project: "projects", about: "about", terminal: "terminal", lab: "lab", robotics: "lab", resume: "resume", contact: "contact", settings: "settings" };
         const id = aliases[rest.toLowerCase()];
         if (id) { onOpenApp(id); output(`Opening ${appInfo[id].title}...`); }
-        else output("Usage: open <explorer|projects|about|terminal|robotics|resume|contact>", "muted");
+        else output("Usage: open <explorer|projects|about|terminal|robotics|resume|contact|settings>", "muted");
         break;
       }
       case "explorer": case "files": onOpenApp("explorer"); output("Opening File Explorer..."); break;
@@ -444,10 +452,11 @@ function TerminalView({ onOpenApp }: { onOpenApp: (id: AppId) => void }) {
       case "skills": output("C/C++ · Python · ROS 2 · OpenCV · SLAM · Nav2\nSTM32 · ESP32 · CAN · Docker · Linux · Git"); break;
       case "resume": onOpenApp("resume"); output("Opening Resume..."); break;
       case "contact": onOpenApp("contact"); output("Opening Contact..."); break;
+      case "settings": onOpenApp("settings"); output("Opening Settings..."); break;
       case "github": window.open("https://github.com/jayesh-sangave", "_blank", "noopener,noreferrer"); output("Opening GitHub profile..."); break;
       case "whoami": output("JXY · Robotics / Controls · Engineer and developer"); break;
       case "date": output(new Date().toString()); break;
-      case "neofetch": output("      .----.       JXY OS\n     / .--. \\      Portfolio Edition 2.0\n    | |    | |     React + TypeScript\n     \\`-.__.-\\`      Robotics-first interface\n      J X Y         Kernel: browser"); break;
+      case "neofetch": append([{ kind: "neofetch", text: "" }]); break;
       case "sudo": output(rest === "hire-me" ? "Permission granted. Let's build something that moves.\nContact: open the Contact app." : "This portfolio shell does not grant system privileges.", "muted"); break;
       case "history": output(history.map((item, i) => `${i + 1}  ${item}`).join("\n") || "No history yet."); break;
       case "pwd": output(`/home/jxy${cwd === "~" ? "" : cwd.slice(1)}`); break;
@@ -466,11 +475,15 @@ function TerminalView({ onOpenApp }: { onOpenApp: (id: AppId) => void }) {
   return (
     <div className="terminal-content" onClick={() => inputRef.current?.focus()}>
       <div className="terminal-output" ref={outputRef} aria-live="polite">
-        {lines.map((line, index) => <pre className={`terminal-line ${line.kind}`} key={index}>{line.text}</pre>)}
+        {lines.map((line, index) => line.kind === "neofetch"
+          ? <NeofetchPreview key={index} />
+          : line.kind === "help-preview"
+            ? <TerminalHelpPreview key={index} />
+            : <pre className={`terminal-line ${line.kind}`} key={index}>{line.text}</pre>)}
       </div>
       {suggestion && <div className="terminal-suggestion">{suggestion}</div>}
       <form className="terminal-input-row" onSubmit={(event) => { event.preventDefault(); runCommand(command); setCommand(""); setSuggestion(""); }}>
-        <label>jxy@{cwd} $</label>
+        <label>jxy@jxy-os:{cwd}$</label>
         <input
           ref={inputRef}
           value={command}
@@ -494,6 +507,39 @@ function TerminalView({ onOpenApp }: { onOpenApp: (id: AppId) => void }) {
       </form>
     </div>
   );
+}
+
+function NeofetchPreview() {
+  const glyphs = {
+    J: ["00111", "00010", "00010", "00010", "10010", "10010", "01100"],
+    X: ["10001", "10001", "01010", "00100", "01010", "10001", "10001"],
+    Y: ["10001", "10001", "01010", "00100", "00100", "00100", "00100"],
+  };
+  const logo = Array.from({ length: 7 }, (_, row) => Object.values(glyphs)
+    .map((letter) => letter[row].replaceAll("1", "•").replaceAll("0", " "))
+    .join("  ")).join("\n");
+  return <div className="terminal-neofetch">
+    <pre className="terminal-ascii-logo">{logo}</pre>
+    <div className="terminal-system-info">
+      <strong>jxy@jxy-os</strong>
+      <span>OS: JXY OS v1.1 (Portfolio Edition)</span>
+      <span>Host: Web (React + TS)</span>
+      <span>Kernel: jxy-kernel 0.1</span>
+      <span>Uptime: browser session</span>
+      <span>Packages: projects robotics resume contact</span>
+      <span>Shell: jxysh</span>
+      <div className="terminal-colorbar"><i/><i/><i/><i/><i/><i/><i/><i/></div>
+    </div>
+  </div>;
+}
+function TerminalHelpPreview() {
+  const rows = [
+    ["help", "Show this command list"], ["about", "About me"],
+    ["projects", "List projects"], ["project <name>", "Open a project"],
+    ["robotics", "Open Robotics Lab"], ["resume", "Open my resume"], ["settings", "Desktop settings"],
+    ["explorer", "Browse project files"], ["neofetch", "System information"],
+  ];
+  return <div className="terminal-help-preview"><div className="terminal-help-title">Available commands</div>{rows.map(([command, description]) => <div className="terminal-help-row" key={command}><span>{command}</span><small>{description}</small></div>)}</div>;
 }
 
 type ProjectTemplate = {
@@ -539,48 +585,74 @@ function FileExplorerView({ onOpenApp, initialLocation = "home" }: { onOpenApp: 
   const [location, setLocation] = useState<"home" | "project">(initialLocation);
   const [selected, setSelected] = useState<ProjectTemplate | null>(null);
   const [view, setView] = useState<"grid" | "list">("grid");
-  const goHome = () => { setLocation("home"); setSelected(null); };
-  const openProjectFolder = () => { setLocation("project"); setSelected(null); };
+  const [query, setQuery] = useState("");
+  const [sortNewest, setSortNewest] = useState(false);
+  const goHome = () => { setLocation("home"); setSelected(null); setQuery(""); };
+  const openProjectFolder = () => { setLocation("project"); setSelected(null); setQuery(""); };
+  const filteredProjects = projectTemplates
+    .filter((project) => `${project.title} ${project.category} ${project.result}`.toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => sortNewest ? b.id.localeCompare(a.id) : a.title.localeCompare(b.title));
+  const breadcrumb = selected ? ["This PC", "Project", selected.title] : location === "project" ? ["This PC", "Project"] : ["This PC"];
 
   return (
     <div className="explorer-shell">
-      <div className="explorer-toolbar">
+      <div className="explorer-topline">
         <div className="explorer-nav">
           <button onClick={() => selected ? setSelected(null) : goHome()} aria-label="Back"><ChevronLeft size={17}/></button>
-          <button onClick={goHome} aria-label="Home"><Home size={15}/></button>
+          <button onClick={goHome} aria-label="Forward or home"><Home size={14}/></button>
         </div>
-        <div className="explorer-address"><HardDrive size={15}/><span>This PC</span><span className="address-separator">›</span><span>{selected ? `Project › ${selected.title}` : location === "project" ? "Project" : ""}</span></div>
-        <div className="explorer-view-toggle"><button className={view === "grid" ? "active" : ""} onClick={() => setView("grid")} aria-label="Grid view">▦</button><button className={view === "list" ? "active" : ""} onClick={() => setView("list")} aria-label="List view">☷</button></div>
+        <div className="explorer-address" aria-label="Current folder">
+          <HardDrive size={14}/>
+          {breadcrumb.map((part, index) => <span className="explorer-crumb" key={`${part}-${index}`}>{index > 0 && <ChevronRight size={11}/>}<b>{part}</b></span>)}
+        </div>
+        <label className="explorer-search"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={location === "project" ? "Search Project" : "Search This PC"}/><Search size={14}/></label>
+      </div>
+      <div className="explorer-commandbar">
+        <button onClick={() => setSortNewest((current) => !current)}>Organize <span>▾</span></button>
+        <button onClick={() => setLocation("home")}>Include in library</button>
+        <button onClick={() => onOpenApp("contact")}>Share with <span>▾</span></button>
+        <button onClick={() => { setLocation("project"); setSelected(null); }}>New folder</button>
+        <div className="explorer-command-spacer"/>
+        <button className={view === "grid" ? "selected" : ""} onClick={() => setView("grid")} aria-label="Large icons">▦</button>
+        <button className={view === "list" ? "selected" : ""} onClick={() => setView("list")} aria-label="Details view">☷</button>
       </div>
       <div className="explorer-body">
         <aside className="explorer-sidebar">
-          <span className="explorer-side-heading">Quick access</span>
-          <button onClick={goHome} className={location === "home" && !selected ? "active" : ""}><Home size={15}/> Home</button>
-          <button onClick={openProjectFolder} className={location === "project" ? "active" : ""}><Folder size={15}/> Project</button>
-          <button onClick={() => onOpenApp("resume")}><FileText size={15}/> Resume.pdf</button>
-          <span className="explorer-side-heading explorer-this-pc">This PC</span>
-          <button onClick={goHome}><HardDrive size={15}/> Local Disk (C:)</button>
+          <div className="explorer-nav-group"><span>Favorites</span>
+            <button onClick={goHome}><Monitor size={14}/>Desktop</button>
+            <button onClick={goHome}><Download size={14}/>Downloads</button>
+            <button className={location === "project" ? "active" : ""} onClick={openProjectFolder}><NeoIcon name="projects" size={17}/>Projects</button>
+          </div>
+          <div className="explorer-nav-group"><span>Libraries</span>
+            <button onClick={() => onOpenApp("resume")}><FileText size={14}/>Documents</button>
+            <button onClick={openProjectFolder}><ImageIcon size={14}/>Pictures</button>
+            <button onClick={openProjectFolder}><Video size={14}/>Videos</button>
+          </div>
+          <div className="explorer-nav-group"><span>This PC</span>
+            <button className={location === "home" ? "active" : ""} onClick={goHome}><HardDrive size={14}/>Local Disk (C:)</button>
+          </div>
+          <div className="explorer-nav-group"><span>Network</span><button onClick={() => onOpenApp("lab")}><Network size={14}/>Robotics Lab</button></div>
         </aside>
         <section className="explorer-content">
           {selected ? <ProjectDetail project={selected} onBack={() => setSelected(null)} /> : location === "home" ? <>
-            <h3 className="explorer-section-title">Frequent locations</h3>
-            <div className={`explorer-items ${view}`}>
-              <button className="explorer-folder-card" onClick={openProjectFolder}><NeoIcon name="projects" size={43}/><span><strong>Project</strong><small>{projectTemplates.length} project pages</small></span></button>
-              <button className="explorer-file-card" onClick={() => onOpenApp("resume")}><NeoIcon name="resume" size={41}/><span><strong>Resume.pdf</strong><small>PDF document</small></span></button>
+            <h3 className="explorer-section-title">Files stored on this computer</h3>
+            <div className="explorer-home-grid">
+              <button className="explorer-home-folder" onClick={openProjectFolder}><NeoIcon name="projects" size={48}/><span><strong>Project</strong><small>{projectTemplates.length} project files</small></span></button>
+              <button className="explorer-home-file" onClick={() => onOpenApp("resume")}><NeoIcon name="resume" size={45}/><span><strong>Jayesh_Sangave_Resume.pdf</strong><small>PDF Document</small></span></button>
             </div>
-            <div className="explorer-info-note">Project pages are structured templates. Images, videos, CAD renders, architecture diagrams and code samples can be added later.</div>
           </> : <>
-            <div className="explorer-folder-heading"><NeoIcon name="projects" size={32}/><div><h3>Project</h3><p>{projectTemplates.length} project pages</p></div></div>
+            <div className="explorer-folder-heading"><NeoIcon name="projects" size={35}/><div><h3>Project</h3><p>{filteredProjects.length} items</p></div></div>
             <div className={`explorer-project-grid ${view}`}>
-              {projectTemplates.map((project) => <button className="explorer-project-tile" key={project.id} onClick={() => setSelected(project)}>
-                <ProjectArtwork project={project} />
+              {filteredProjects.map((project) => <button className="explorer-project-tile" key={project.id} onDoubleClick={() => setSelected(project)} onClick={() => setSelected(project)}>
+                <ProjectArtwork project={project}/>
                 <span className="explorer-project-meta"><strong>{project.title}</strong><small>{project.category}</small><em>{project.result}</em></span>
               </button>)}
+              {filteredProjects.length === 0 && <p className="explorer-empty">No project files match your search.</p>}
             </div>
           </>}
         </section>
       </div>
-      <div className="explorer-status"><span>{selected ? selected.file : location === "project" ? `${projectTemplates.length} items` : "2 items"}</span><span>JXY OS File Explorer</span></div>
+      <div className="explorer-status"><span>{selected ? selected.file : location === "project" ? `${filteredProjects.length} items` : "2 items"}</span><span>JXY OS File Explorer</span></div>
     </div>
   );
 }
@@ -623,6 +695,15 @@ function ProjectDetail({ project, onBack }: { project: ProjectTemplate; onBack: 
     <div className="project-tech-row"><div><span className="tech-label">TECH STACK</span><div className="technology-tags">{project.technologies.map((tag) => <span key={tag}>{tag}</span>)}</div></div><div className="project-stat"><strong>{project.id === "robocon-2026" ? "AIR 2" : project.id === "r2-navigation" ? "53%" : project.id === "dunking-robot" ? "30 cm" : "REAL-TIME"}</strong><small>{project.id === "robocon-2026" ? "National Rank" : project.id === "r2-navigation" ? "Faster traversal" : project.id === "dunking-robot" ? "Jump height" : "Self-alignment"}</small></div></div>
     <nav className="project-tabbar" aria-label="Project sections">{tabs.map(([id, label]) => <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>{label}</button>)}</nav>
   </div>;
+}
+
+function SettingsView({ onWallpaperChange }: { onWallpaperChange: (wallpaper: number) => void }) {
+  const wallpapers = [
+    { id: 0, title: "Robotics workshop", detail: "Cyan and amber lab" },
+    { id: 1, title: "Blue engineering bay", detail: "Cool blue lighting" },
+    { id: 2, title: "Night shift", detail: "Dark cinematic mode" },
+  ];
+  return <div className="settings-view"><div className="settings-heading"><span className="eyebrow">PERSONALIZATION</span><h2>Settings</h2><p>Configure your JXY OS workspace.</p></div><h3>Desktop wallpaper</h3><div className="settings-wallpapers">{wallpapers.map((item) => <button key={item.id} onClick={() => onWallpaperChange(item.id)}><span className={`wallpaper-swatch wallpaper-swatch-${item.id}`}/><strong>{item.title}</strong><small>{item.detail}</small></button>)}</div><div className="settings-note">JXY OS · Robotics Portfolio Edition</div></div>;
 }
 
 function ResumeView() {
