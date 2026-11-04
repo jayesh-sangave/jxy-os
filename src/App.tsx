@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import {
-  Folder, FolderOpen, FileText, File, Terminal, Cpu, Mail, Minus, Square, X,
+  Folder, FileText, Minus, Square, X,
   RefreshCw, Monitor, Maximize2, Activity, Radio, Gauge, Network, ChevronLeft,
-  Home, HardDrive, Download, ExternalLink, Image as ImageIcon, Video, Box, Code2,
+  Home, HardDrive, Download, ExternalLink, Image as ImageIcon, Code2,
 } from "lucide-react";
 import StartMenu, { type AppId } from "./components/StartMenu";
+import NeoIcon, { type NeoIconName } from "./components/NeoIcon";
 import "./index.css";
 import "./mobile-robotics.css";
+import "./neo-retro.css";
 
 type Snap = "none" | "left" | "right";
 type WindowState = {
@@ -21,16 +23,16 @@ type WindowState = {
   snap: Snap;
 };
 
-const appInfo: Record<AppId, { title: string; icon: typeof Folder }> = {
-  explorer: { title: "File Explorer", icon: FolderOpen },
-  projects: { title: "My Projects", icon: Folder },
-  about: { title: "About Me", icon: FileText },
-  terminal: { title: "Terminal", icon: Terminal },
-  lab: { title: "Robotics Lab", icon: Cpu },
-  resume: { title: "Resume", icon: FileText },
-  contact: { title: "Contact", icon: Mail },
+const appInfo: Record<AppId, { title: string; icon: NeoIconName }> = {
+  explorer: { title: "File Explorer", icon: "explorer" },
+  projects: { title: "Projects", icon: "projects" },
+  about: { title: "About Me", icon: "about" },
+  terminal: { title: "Terminal", icon: "terminal" },
+  lab: { title: "Robotics Lab", icon: "lab" },
+  resume: { title: "Resume", icon: "resume" },
+  contact: { title: "Contact", icon: "contact" },
 };
-const desktopApps: AppId[] = ["explorer", "projects", "about", "lab", "terminal"];
+const desktopApps: AppId[] = ["projects", "lab", "explorer", "terminal", "resume", "about", "contact"];
 
 function App() {
   const [windows, setWindows] = useState<WindowState[]>([]);
@@ -39,7 +41,13 @@ function App() {
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [wallpaper, setWallpaper] = useState(0);
+  const [booting, setBooting] = useState(true);
   const [mobile, setMobile] = useState(() => window.matchMedia("(max-width: 700px)").matches);
+
+  useEffect(() => {
+    const bootTimer = window.setTimeout(() => setBooting(false), 2350);
+    return () => window.clearTimeout(bootTimer);
+  }, []);
 
   useEffect(() => {
     const query = window.matchMedia("(max-width: 700px)");
@@ -134,9 +142,10 @@ function App() {
       onPointerDown={handleDesktopPointerDown}
       onContextMenu={handleContextMenu}
     >
+      <div className="desktop-brand"><strong>JXY OS</strong><span>ROBOTICS PORTFOLIO OS</span></div>
       <div className="desktop-icons">
         {desktopApps.map((id) => {
-          const Icon = appInfo[id].icon;
+          const iconName = appInfo[id].icon;
           return (
             <button
               className={`desktop-icon ${selectedIcon === id ? "selected" : ""}`}
@@ -154,7 +163,7 @@ function App() {
                 });
               }}
             >
-              <Icon size={36} strokeWidth={1.5} />
+              <NeoIcon name={iconName} size={46} className="desktop-app-icon" />
               <span>{appInfo[id].title}</span>
             </button>
           );
@@ -195,6 +204,7 @@ function App() {
       )}
 
       {startOpen && <StartMenu onOpenApp={openApp} onClose={() => setStartOpen(false)} />}
+      {booting && <BootScreen />}
       <Taskbar
         windows={windows}
         onWindowClick={handleTaskbarClick}
@@ -264,7 +274,7 @@ function Window({ window: win, mobile, onFocus, onClose, onMinimize, onMaximize,
         onPointerCancel={() => { setDragging(false); setSnapPreview("none"); }}
         onDoubleClick={() => { if (!mobile) onMaximize(); }}
       >
-        <span>{win.title}</span>
+        <div className="window-caption"><NeoIcon name={appInfo[win.id].icon} size={22} /><span>{win.title}</span></div>
         <div className="window-controls">
           <button onPointerDown={(event) => event.stopPropagation()} onClick={onMinimize} aria-label="Minimize"><Minus size={14} /></button>
           <button onPointerDown={(event) => event.stopPropagation()} onClick={onMaximize} aria-label="Maximize"><Square size={12} /></button>
@@ -273,8 +283,7 @@ function Window({ window: win, mobile, onFocus, onClose, onMinimize, onMaximize,
       </header>
       {snapPreview !== "none" && <div className={`snap-preview snap-${snapPreview}`} />}
       <div className={`window-content ${win.id === "terminal" ? "terminal-window-content" : ""}`}>
-        {win.id === "explorer" && <FileExplorerView onOpenApp={onOpenApp} />}
-        {win.id === "projects" && <ProjectsView />}
+        {(win.id === "explorer" || win.id === "projects") && <FileExplorerView onOpenApp={onOpenApp} initialLocation={win.id === "projects" ? "project" : "home"} />}
         {win.id === "about" && <AboutView />}
         {win.id === "lab" && <RoboticsLabView />}
         {win.id === "terminal" && <TerminalView onOpenApp={onOpenApp} />}
@@ -290,21 +299,6 @@ const projects = [
   { title: "LiDAR SLAM", category: "Localization", description: "A LiDAR-based mapping and localization pipeline using point-cloud processing and scan matching.", technologies: ["C++", "ROS 2", "PCL", "ICP"] },
   { title: "Motor Control System", category: "Embedded", description: "A real-time motor control system with encoder feedback, PID control, and CAN communication.", technologies: ["STM32", "C", "CAN", "PID"] },
 ];
-
-function ProjectsView() {
-  return (
-    <div className="portfolio-page">
-      <div className="portfolio-heading"><span className="eyebrow">SELECTED WORK</span><h2>Projects</h2><p>Things built, broken, debugged, and made to work.</p></div>
-      <div className="project-grid">{projects.map((project, index) => (
-        <article className="project-card" key={project.title}>
-          <div className="project-card-top"><span className="project-number">{String(index + 1).padStart(2, "0")}</span><span className="project-category">{project.category}</span></div>
-          <h3>{project.title}</h3><p>{project.description}</p>
-          <div className="technology-tags">{project.technologies.map((technology) => <span key={technology}>{technology}</span>)}</div>
-        </article>
-      ))}</div>
-    </div>
-  );
-}
 
 function AboutView() {
   const skills = ["Robotics", "ROS 2", "C++", "Python", "Computer Vision", "Embedded Systems", "Control Systems", "SLAM"];
@@ -541,8 +535,8 @@ const projectTemplates: ProjectTemplate[] = [
   },
 ];
 
-function FileExplorerView({ onOpenApp }: { onOpenApp: (id: AppId) => void }) {
-  const [location, setLocation] = useState<"home" | "project">("home");
+function FileExplorerView({ onOpenApp, initialLocation = "home" }: { onOpenApp: (id: AppId) => void; initialLocation?: "home" | "project" }) {
+  const [location, setLocation] = useState<"home" | "project">(initialLocation);
   const [selected, setSelected] = useState<ProjectTemplate | null>(null);
   const [view, setView] = useState<"grid" | "list">("grid");
   const goHome = () => { setLocation("home"); setSelected(null); };
@@ -571,15 +565,16 @@ function FileExplorerView({ onOpenApp }: { onOpenApp: (id: AppId) => void }) {
           {selected ? <ProjectDetail project={selected} onBack={() => setSelected(null)} /> : location === "home" ? <>
             <h3 className="explorer-section-title">Frequent locations</h3>
             <div className={`explorer-items ${view}`}>
-              <button className="explorer-folder-card" onClick={openProjectFolder}><Folder size={39}/><span><strong>Project</strong><small>{projectTemplates.length} project pages</small></span></button>
-              <button className="explorer-file-card" onClick={() => onOpenApp("resume")}><FileText size={34}/><span><strong>Resume.pdf</strong><small>PDF document</small></span></button>
+              <button className="explorer-folder-card" onClick={openProjectFolder}><NeoIcon name="projects" size={43}/><span><strong>Project</strong><small>{projectTemplates.length} project pages</small></span></button>
+              <button className="explorer-file-card" onClick={() => onOpenApp("resume")}><NeoIcon name="resume" size={41}/><span><strong>Resume.pdf</strong><small>PDF document</small></span></button>
             </div>
             <div className="explorer-info-note">Project pages are structured templates. Images, videos, CAD renders, architecture diagrams and code samples can be added later.</div>
           </> : <>
-            <div className="explorer-folder-heading"><Folder size={22}/><div><h3>Project</h3><p>{projectTemplates.length} project pages</p></div></div>
-            <div className={`explorer-items project-items ${view}`}>
-              {projectTemplates.map((project) => <button className="explorer-project-file" key={project.id} onClick={() => setSelected(project)}>
-                <File size={29}/><span><strong>{project.title}</strong><small>{project.category}</small><small>{project.file}</small></span>
+            <div className="explorer-folder-heading"><NeoIcon name="projects" size={32}/><div><h3>Project</h3><p>{projectTemplates.length} project pages</p></div></div>
+            <div className={`explorer-project-grid ${view}`}>
+              {projectTemplates.map((project) => <button className="explorer-project-tile" key={project.id} onClick={() => setSelected(project)}>
+                <ProjectArtwork project={project} />
+                <span className="explorer-project-meta"><strong>{project.title}</strong><small>{project.category}</small><em>{project.result}</em></span>
               </button>)}
             </div>
           </>}
@@ -590,20 +585,43 @@ function FileExplorerView({ onOpenApp }: { onOpenApp: (id: AppId) => void }) {
   );
 }
 
+function ProjectArtwork({ project, large = false }: { project: ProjectTemplate; large?: boolean }) {
+  return <div className={`project-artwork art-${project.id} ${large ? "large" : ""}`} aria-hidden="true">
+    <div className="art-grid" />
+    <div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" />
+    <div className="art-machine"><span className="art-machine-top"/><span className="art-machine-core"/><span className="art-wheel wheel-one"/><span className="art-wheel wheel-two"/><span className="art-wheel wheel-three"/></div>
+    <span className="art-code">JXY / ROBOTICS</span><span className="art-id">{project.id.toUpperCase()}</span>
+  </div>;
+}
+
 function ProjectDetail({ project, onBack }: { project: ProjectTemplate; onBack: () => void }) {
-  const mediaSlots = [
-    { label: "Photos", hint: "Robot builds, mechanisms, competition shots", icon: <ImageIcon size={19}/> },
-    { label: "Videos", hint: "Demo runs, match footage, test recordings", icon: <Video size={19}/> },
-    { label: "CAD & diagrams", hint: "Assemblies, schematics, architecture", icon: <Box size={19}/> },
-    { label: "Code & logs", hint: "Repositories, plots, debug notes", icon: <Code2 size={19}/> },
-  ];
+  const [tab, setTab] = useState<"overview" | "design" | "software" | "hardware" | "results" | "media">("overview");
+  const tabs = [
+    ["overview", "Overview"], ["design", "System Design"], ["software", "Software"],
+    ["hardware", "Hardware"], ["results", "Results"], ["media", "Media"],
+  ] as const;
   return <div className="project-detail-page">
-    <button className="project-detail-back" onClick={onBack}><ChevronLeft size={15}/> Project folder</button>
-    <div className="project-detail-heading"><span className="eyebrow">{project.category.toUpperCase()}</span><h2>{project.title}</h2><p>{project.summary}</p></div>
-    <div className="project-detail-meta"><div><small>ROLE</small><strong>{project.role}</strong></div><div><small>OUTCOME</small><strong>{project.result}</strong></div></div>
-    <section className="project-detail-section"><h3>Engineering notes</h3><ul>{project.facts.map((fact) => <li key={fact}>{fact}</li>)}</ul></section>
-    <section className="project-detail-section"><h3>Technology</h3><div className="technology-tags">{project.technologies.map((tag) => <span key={tag}>{tag}</span>)}</div></section>
-    <section className="project-detail-section"><div className="project-media-title"><h3>Media & attachments</h3><span>ASSETS TO BE ADDED</span></div><div className="project-media-grid">{mediaSlots.map((slot) => <article className="project-media-slot" key={slot.label}>{slot.icon}<strong>{slot.label}</strong><p>{slot.hint}</p><small>Placeholder · awaiting assets</small></article>)}</div></section>
+    <div className="project-detail-topline"><button className="project-detail-back" onClick={onBack}><ChevronLeft size={15}/> Projects</button><span>PROJECT FILE · {project.file}</span></div>
+    <div className="project-showcase-heading"><div><span className="eyebrow">{project.category.toUpperCase()}</span><h2>{project.title}</h2><p>{project.summary}</p></div><div className="project-achievement"><span>PROJECT OUTCOME</span><strong>{project.result}</strong></div></div>
+    <div className="project-showcase-layout">
+      <div className="project-gallery-column">
+        <ProjectArtwork project={project} large />
+        <div className="project-gallery-strip"><div className="gallery-thumb selected"><ProjectArtwork project={project}/></div><div className="gallery-thumb"><span className="gallery-placeholder">PHOTO SLOT</span></div><div className="gallery-thumb"><span className="gallery-placeholder">VIDEO</span></div><div className="gallery-thumb"><span className="gallery-placeholder">CAD / DIAGRAM</span></div></div>
+      </div>
+      <div className="project-information-panel">
+        {tab === "overview" && <>
+          <section><h3><FileText size={15}/> Overview</h3><p>{project.summary}</p></section>
+          <section><h3><Cpu size={15}/> My Role</h3><strong className="project-role">{project.role}</strong><ul>{project.facts.map((fact) => <li key={fact}>{fact}</li>)}</ul></section>
+        </>}
+        {tab === "design" && <section><h3><Network size={15}/> System Design</h3><p>Architecture diagrams, mechanism drawings and system-level design notes will live here.</p><div className="project-asset-prompt">SYSTEM ARCHITECTURE / CAD ASSET SLOT</div></section>}
+        {tab === "software" && <section><h3><Code2 size={15}/> Software</h3><p>Software modules, repositories, control logic and implementation notes.</p><div className="technology-tags">{project.technologies.map((tag) => <span key={tag}>{tag}</span>)}</div><div className="project-asset-prompt">CODE / REPOSITORY / ROS GRAPH</div></section>}
+        {tab === "hardware" && <section><h3><Cpu size={15}/> Hardware</h3><p>Robot assembly, electronics, actuators, sensors and mechanical details.</p><div className="project-asset-prompt">HARDWARE PHOTOS / BOM / SCHEMATICS</div></section>}
+        {tab === "results" && <section><h3><Activity size={15}/> Results</h3><div className="result-highlight">{project.result}</div><p>Competition outcome and measured performance details.</p></section>}
+        {tab === "media" && <section><h3><ImageIcon size={15}/> Media Library</h3><p>Photos, match footage, test videos and CAD renders will be added here.</p><div className="project-asset-prompt">MEDIA ASSETS / AWAITING UPLOAD</div></section>}
+      </div>
+    </div>
+    <div className="project-tech-row"><div><span className="tech-label">TECH STACK</span><div className="technology-tags">{project.technologies.map((tag) => <span key={tag}>{tag}</span>)}</div></div><div className="project-stat"><strong>{project.id === "robocon-2026" ? "AIR 2" : project.id === "r2-navigation" ? "53%" : project.id === "dunking-robot" ? "30 cm" : "REAL-TIME"}</strong><small>{project.id === "robocon-2026" ? "National Rank" : project.id === "r2-navigation" ? "Faster traversal" : project.id === "dunking-robot" ? "Jump height" : "Self-alignment"}</small></div></div>
+    <nav className="project-tabbar" aria-label="Project sections">{tabs.map(([id, label]) => <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>{label}</button>)}</nav>
   </div>;
 }
 
@@ -662,11 +680,24 @@ function Taskbar({ windows, onWindowClick, onStartClick, startOpen }: {
         <span className="start-orb windows7-orb" aria-hidden="true"><i className="win-pane pane-red"/><i className="win-pane pane-green"/><i className="win-pane pane-blue"/><i className="win-pane pane-yellow"/></span><span className="start-label">Start</span>
       </button>
       <div className="taskbar-apps">{windows.filter((win) => !win.closing).map((win) => (
-        <button key={win.id} className={`taskbar-item ${!win.minimized ? "active" : ""}`} onClick={() => onWindowClick(win.id)} title={win.title}>{win.title}</button>
+        <button key={win.id} className={`taskbar-item ${!win.minimized ? "active" : ""}`} onClick={() => onWindowClick(win.id)} title={win.title} aria-label={win.title}>
+          <NeoIcon name={appInfo[win.id].icon} size={31} />
+        </button>
       ))}</div>
       <div className="system-tray"><span>JXY OS</span><span>{time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></div>
     </footer>
   );
+}
+
+function BootScreen() {
+  const bootLines = ["Initialize kernel", "Load window manager", "Mount user workspace", "Start robotics modules", "Launch desktop"];
+  return <div className="boot-screen" role="status" aria-label="Starting JXY OS">
+    <div className="boot-card"><div className="boot-mark"><span className="boot-orb"><i/><i/><i/><i/></span><div><strong>JXY OS</strong><small>ROBOTICS PORTFOLIO OS</small></div></div>
+      <div className="boot-starting">Starting...</div><div className="boot-progress"><span/></div>
+      <div className="boot-log">{bootLines.map((line, index) => <div className="boot-log-line" key={line} style={{ animationDelay: `${350 + index * 270}ms` }}><b>[ OK ]</b> {line}</div>)}</div>
+      <div className="boot-footer">ENGINEERING WORKSPACE · BUILD 2026.11</div>
+    </div>
+  </div>;
 }
 
 export default App;
