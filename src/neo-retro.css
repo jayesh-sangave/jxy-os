@@ -863,12 +863,12 @@ button, input, textarea { font-family: inherit; }
   border-color: rgba(255,225,214,.92);
 }
 
-/* Windows 7 taskbar: inset glass panel, glossy blue reflections,
-   four permanently pinned launchers, and a two-line clock. */
+/* Windows 7 taskbar: edge-to-edge Aero glass strip, glossy reflections,
+   pinned launchers, and a two-line system clock. */
 .taskbar {
   position: absolute;
   z-index: 9000;
-  inset: auto 20px 0;
+  inset: auto 0 0 0;
   height: 50px;
   display: flex;
   align-items: center;
@@ -885,9 +885,9 @@ button, input, textarea { font-family: inherit; }
       rgba(31, 86, 151, .91) 37%,
       rgba(8, 46, 101, .97) 76%,
       rgba(4, 30, 73, .99) 100%);
-  border: 1px solid rgba(177, 222, 255, .76);
-  border-bottom: 0;
-  border-radius: 5px 5px 0 0;
+  border: 0;
+  border-top: 1px solid rgba(205, 237, 255, .82);
+  border-radius: 0;
   box-shadow:
     0 -3px 17px rgba(0, 0, 0, .34),
     0 0 0 1px rgba(2, 19, 48, .65),
@@ -924,11 +924,11 @@ button, input, textarea { font-family: inherit; }
 .taskbar .start-button {
   position: relative;
   z-index: 1;
-  flex: 0 0 53px;
-  width: 53px;
-  min-width: 53px;
+  flex: 0 0 72px;
+  width: 72px;
+  min-width: 72px;
   height: 49px;
-  margin: -1px 0 0 -1px;
+  margin: -1px 0 0 0;
   padding: 0;
   display: grid;
   place-items: center;
@@ -939,8 +939,8 @@ button, input, textarea { font-family: inherit; }
   box-shadow: inset 1px 0 0 rgba(255,255,255,.26);
 }
 .taskbar .start-orb.windows7-orb {
-  width: 41px;
-  height: 41px;
+  width: 48px;
+  height: 48px;
   border: 1px solid rgba(232,250,255,.98);
   background:
     radial-gradient(circle at 31% 20%, #fff 0, #d7f4ff 7%, #48a5df 28%, #0b4f91 64%, #032451 100%);
@@ -955,8 +955,8 @@ button, input, textarea { font-family: inherit; }
   position: absolute;
   left: 6px;
   top: 4px;
-  width: 26px;
-  height: 10px;
+  width: 30px;
+  height: 11px;
   border-radius: 50%;
   transform: rotate(-24deg);
   background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,0));
