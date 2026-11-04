@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import {
-  Folder, FileText, Terminal, Cpu, Mail, Minus, Square, X,
-  RefreshCw, Monitor, Maximize2, Activity, Radio, Gauge, Network,
+  Folder, FolderOpen, FileText, File, Terminal, Cpu, Mail, Minus, Square, X,
+  RefreshCw, Monitor, Maximize2, Activity, Radio, Gauge, Network, ChevronLeft,
+  Home, HardDrive, Download, ExternalLink, Image as ImageIcon, Video, Box, Code2,
 } from "lucide-react";
 import StartMenu, { type AppId } from "./components/StartMenu";
 import "./index.css";
@@ -21,6 +22,7 @@ type WindowState = {
 };
 
 const appInfo: Record<AppId, { title: string; icon: typeof Folder }> = {
+  explorer: { title: "File Explorer", icon: FolderOpen },
   projects: { title: "My Projects", icon: Folder },
   about: { title: "About Me", icon: FileText },
   terminal: { title: "Terminal", icon: Terminal },
@@ -28,7 +30,7 @@ const appInfo: Record<AppId, { title: string; icon: typeof Folder }> = {
   resume: { title: "Resume", icon: FileText },
   contact: { title: "Contact", icon: Mail },
 };
-const desktopApps: AppId[] = ["projects", "about", "lab", "terminal"];
+const desktopApps: AppId[] = ["explorer", "projects", "about", "lab", "terminal"];
 
 function App() {
   const [windows, setWindows] = useState<WindowState[]>([]);
@@ -270,7 +272,8 @@ function Window({ window: win, mobile, onFocus, onClose, onMinimize, onMaximize,
         </div>
       </header>
       {snapPreview !== "none" && <div className={`snap-preview snap-${snapPreview}`} />}
-      <div className="window-content">
+      <div className={`window-content ${win.id === "terminal" ? "terminal-window-content" : ""}`}>
+        {win.id === "explorer" && <FileExplorerView onOpenApp={onOpenApp} />}
         {win.id === "projects" && <ProjectsView />}
         {win.id === "about" && <AboutView />}
         {win.id === "lab" && <RoboticsLabView />}
@@ -368,6 +371,7 @@ type TerminalLine = { kind: "input" | "output" | "error" | "muted"; text: string
 const terminalHelp = [
   ["help, /help", "List available commands and usage"],
   ["about", "Open the About Me app"],
+  ["explorer", "Open File Explorer"],
   ["open <app>", "Open an app by name or alias"],
   ["projects", "List selected projects"],
   ["project <name>", "Show a project summary"],
@@ -426,12 +430,13 @@ function TerminalView({ onOpenApp }: { onOpenApp: (id: AppId) => void }) {
       case "clear": setLines([]); break;
       case "about": onOpenApp("about"); output("Opening About Me..."); break;
       case "open": {
-        const aliases: Record<string, AppId> = { projects: "projects", project: "projects", about: "about", terminal: "terminal", lab: "lab", robotics: "lab", resume: "resume", contact: "contact" };
+        const aliases: Record<string, AppId> = { explorer: "explorer", files: "explorer", projects: "projects", project: "projects", about: "about", terminal: "terminal", lab: "lab", robotics: "lab", resume: "resume", contact: "contact" };
         const id = aliases[rest.toLowerCase()];
         if (id) { onOpenApp(id); output(`Opening ${appInfo[id].title}...`); }
-        else output("Usage: open <projects|about|terminal|robotics|resume|contact>", "muted");
+        else output("Usage: open <explorer|projects|about|terminal|robotics|resume|contact>", "muted");
         break;
       }
+      case "explorer": case "files": onOpenApp("explorer"); output("Opening File Explorer..."); break;
       case "projects": output(projects.map((p, i) => `${i + 1}. ${p.title} [${p.category}]`).join("\n")); break;
       case "project": {
         const found = projects.find((p) => p.title.toLowerCase().includes(rest.toLowerCase()));
@@ -497,14 +502,126 @@ function TerminalView({ onOpenApp }: { onOpenApp: (id: AppId) => void }) {
   );
 }
 
-function ResumeView() {
+type ProjectTemplate = {
+  id: string; title: string; file: string; category: string; role: string;
+  summary: string; facts: string[]; result: string; technologies: string[];
+};
+const projectTemplates: ProjectTemplate[] = [
+  {
+    id: "robocon-2026", title: "DD Robocon 2026", file: "DD_Robocon_2026.project", category: "Competition robotics",
+    role: "Team Captain & Manual Operator",
+    summary: "Led the team across autonomous and manual robot development, testing, strategy, and competition operations.",
+    facts: ["Led the team during the 2026 DD Robocon season.", "Served as manual operator during competition while overseeing both robots."],
+    result: "All India Rank 2",
+    technologies: ["Robotics", "Controls", "Competition engineering"],
+  },
+  {
+    id: "r2-navigation", title: "Autonomous Navigation · R2", file: "R2_Autonomous_Navigation.project", category: "Autonomous systems",
+    role: "Robotics Control Developer",
+    summary: "Optimized ROS-based navigation on the R2 competition robot, focusing on faster full-field traversal.",
+    facts: ["Worked on ROS-based navigation for the 2024 competition robot.", "Optimized the navigation system to reduce full-field traversal time."],
+    result: "Traversal time reduced from 15 s to 7 s (53% faster)",
+    technologies: ["ROS", "Navigation", "Robot controls"],
+  },
+  {
+    id: "dunking-robot", title: "Dunking Robot · Robocon 2025", file: "Dunking_Robot_2025.project", category: "Mechanical + robotics",
+    role: "Design and build",
+    summary: "Designed and built a jumping robot for the 2025 Robocon season, using an elastic-based energy storage system.",
+    facts: ["Built a 25 kg robot.", "Designed the jump mechanism around elastic energy storage."],
+    result: "30 cm jump height",
+    technologies: ["Mechanical design", "Energy storage", "Robot integration"],
+  },
+  {
+    id: "auto-aim", title: "Real-Time Auto-Aim System", file: "Real_Time_Auto_Aim.project", category: "Controls + perception",
+    role: "System engineering",
+    summary: "Engineered a real-time auto-aim system for closed-loop self-alignment and dynamic shooting-power adjustment.",
+    facts: ["Implemented closed-loop self-alignment.", "Adjusted shooting power dynamically."],
+    result: "Closed-loop alignment with dynamic shooting-power adjustment",
+    technologies: ["Control systems", "Perception", "Real-time systems"],
+  },
+];
+
+function FileExplorerView({ onOpenApp }: { onOpenApp: (id: AppId) => void }) {
+  const [location, setLocation] = useState<"home" | "project">("home");
+  const [selected, setSelected] = useState<ProjectTemplate | null>(null);
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const goHome = () => { setLocation("home"); setSelected(null); };
+  const openProjectFolder = () => { setLocation("project"); setSelected(null); };
+
   return (
-    <div className="portfolio-page resume-view"><span className="eyebrow">EXPERIENCE & EDUCATION</span><h2>Resume</h2>
-      <p>A concise overview of my engineering experience, projects, education, and technical skills.</p>
-      <div className="resume-placeholder"><FileText size={42} /><h3>Resume PDF</h3><p>Add your resume PDF to the public folder to enable the download.</p><a href="/resume.pdf" download>Download resume</a></div>
+    <div className="explorer-shell">
+      <div className="explorer-toolbar">
+        <div className="explorer-nav">
+          <button onClick={() => selected ? setSelected(null) : goHome()} aria-label="Back"><ChevronLeft size={17}/></button>
+          <button onClick={goHome} aria-label="Home"><Home size={15}/></button>
+        </div>
+        <div className="explorer-address"><HardDrive size={15}/><span>This PC</span><span className="address-separator">›</span><span>{selected ? `Project › ${selected.title}` : location === "project" ? "Project" : ""}</span></div>
+        <div className="explorer-view-toggle"><button className={view === "grid" ? "active" : ""} onClick={() => setView("grid")} aria-label="Grid view">▦</button><button className={view === "list" ? "active" : ""} onClick={() => setView("list")} aria-label="List view">☷</button></div>
+      </div>
+      <div className="explorer-body">
+        <aside className="explorer-sidebar">
+          <span className="explorer-side-heading">Quick access</span>
+          <button onClick={goHome} className={location === "home" && !selected ? "active" : ""}><Home size={15}/> Home</button>
+          <button onClick={openProjectFolder} className={location === "project" ? "active" : ""}><Folder size={15}/> Project</button>
+          <button onClick={() => onOpenApp("resume")}><FileText size={15}/> Resume.pdf</button>
+          <span className="explorer-side-heading explorer-this-pc">This PC</span>
+          <button onClick={goHome}><HardDrive size={15}/> Local Disk (C:)</button>
+        </aside>
+        <section className="explorer-content">
+          {selected ? <ProjectDetail project={selected} onBack={() => setSelected(null)} /> : location === "home" ? <>
+            <h3 className="explorer-section-title">Frequent locations</h3>
+            <div className={`explorer-items ${view}`}>
+              <button className="explorer-folder-card" onClick={openProjectFolder}><Folder size={39}/><span><strong>Project</strong><small>{projectTemplates.length} project pages</small></span></button>
+              <button className="explorer-file-card" onClick={() => onOpenApp("resume")}><FileText size={34}/><span><strong>Resume.pdf</strong><small>PDF document</small></span></button>
+            </div>
+            <div className="explorer-info-note">Project pages are structured templates. Images, videos, CAD renders, architecture diagrams and code samples can be added later.</div>
+          </> : <>
+            <div className="explorer-folder-heading"><Folder size={22}/><div><h3>Project</h3><p>{projectTemplates.length} project pages</p></div></div>
+            <div className={`explorer-items project-items ${view}`}>
+              {projectTemplates.map((project) => <button className="explorer-project-file" key={project.id} onClick={() => setSelected(project)}>
+                <File size={29}/><span><strong>{project.title}</strong><small>{project.category}</small><small>{project.file}</small></span>
+              </button>)}
+            </div>
+          </>}
+        </section>
+      </div>
+      <div className="explorer-status"><span>{selected ? selected.file : location === "project" ? `${projectTemplates.length} items` : "2 items"}</span><span>JXY OS File Explorer</span></div>
     </div>
   );
 }
+
+function ProjectDetail({ project, onBack }: { project: ProjectTemplate; onBack: () => void }) {
+  const mediaSlots = [
+    { label: "Photos", hint: "Robot builds, mechanisms, competition shots", icon: <ImageIcon size={19}/> },
+    { label: "Videos", hint: "Demo runs, match footage, test recordings", icon: <Video size={19}/> },
+    { label: "CAD & diagrams", hint: "Assemblies, schematics, architecture", icon: <Box size={19}/> },
+    { label: "Code & logs", hint: "Repositories, plots, debug notes", icon: <Code2 size={19}/> },
+  ];
+  return <div className="project-detail-page">
+    <button className="project-detail-back" onClick={onBack}><ChevronLeft size={15}/> Project folder</button>
+    <div className="project-detail-heading"><span className="eyebrow">{project.category.toUpperCase()}</span><h2>{project.title}</h2><p>{project.summary}</p></div>
+    <div className="project-detail-meta"><div><small>ROLE</small><strong>{project.role}</strong></div><div><small>OUTCOME</small><strong>{project.result}</strong></div></div>
+    <section className="project-detail-section"><h3>Engineering notes</h3><ul>{project.facts.map((fact) => <li key={fact}>{fact}</li>)}</ul></section>
+    <section className="project-detail-section"><h3>Technology</h3><div className="technology-tags">{project.technologies.map((tag) => <span key={tag}>{tag}</span>)}</div></section>
+    <section className="project-detail-section"><div className="project-media-title"><h3>Media & attachments</h3><span>ASSETS TO BE ADDED</span></div><div className="project-media-grid">{mediaSlots.map((slot) => <article className="project-media-slot" key={slot.label}>{slot.icon}<strong>{slot.label}</strong><p>{slot.hint}</p><small>Placeholder · awaiting assets</small></article>)}</div></section>
+  </div>;
+}
+
+function ResumeView() {
+  return (
+    <div className="resume-viewer">
+      <div className="resume-toolbar">
+        <div><span className="eyebrow">DOCUMENT VIEWER</span><h2>Jayesh Sangave · Resume</h2></div>
+        <div className="resume-actions">
+          <a href="/resume.pdf" target="_blank" rel="noreferrer"><ExternalLink size={14} /> Open PDF</a>
+          <a href="/resume.pdf" download="Jayesh_Sangave_Resume.pdf"><Download size={14} /> Download</a>
+        </div>
+      </div>
+      <iframe className="resume-frame" src="/resume.pdf#toolbar=1&navpanes=0" title="Jayesh Sangave resume" />
+    </div>
+  );
+}
+
 function ContactView() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -513,7 +630,7 @@ function ContactView() {
     event.preventDefault();
     const subject = encodeURIComponent(`Portfolio contact from ${name}`);
     const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\n${message}`);
-    window.location.href = `mailto:your-email@example.com?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:jayesh.sangave.mtt@gmail.com?subject=${subject}&body=${body}`;
   };
   return (
     <div className="portfolio-page"><div className="portfolio-heading"><span className="eyebrow">GET IN TOUCH</span><h2>Contact</h2><p>Have a project, collaboration, or engineering problem?</p></div>
@@ -542,7 +659,7 @@ function Taskbar({ windows, onWindowClick, onStartClick, startOpen }: {
   return (
     <footer className="taskbar" onPointerDown={(event) => event.stopPropagation()}>
       <button className={`start-button ${startOpen ? "start-active" : ""}`} onClick={onStartClick}>
-        <span className="start-orb">✦</span><span className="start-label">Start</span>
+        <span className="start-orb windows7-orb" aria-hidden="true"><i className="win-pane pane-red"/><i className="win-pane pane-green"/><i className="win-pane pane-blue"/><i className="win-pane pane-yellow"/></span><span className="start-label">Start</span>
       </button>
       <div className="taskbar-apps">{windows.filter((win) => !win.closing).map((win) => (
         <button key={win.id} className={`taskbar-item ${!win.minimized ? "active" : ""}`} onClick={() => onWindowClick(win.id)} title={win.title}>{win.title}</button>
